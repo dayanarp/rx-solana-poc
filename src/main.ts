@@ -1,9 +1,13 @@
+import { Keypair } from '@solana/web3.js';
 import { concatMap } from 'rxjs';
 import { accountSubscribe } from './account-subscribe';
-import { AIRDROP_LAMPORTS, WALLET_PUBLIC_KEY } from './constants';
+import { createNativeTransferTransaction } from './create-native-transfer-transaction';
 import { createWebSocket } from './create-websocket';
+import mySecretKey from './id.json';
 import { onAccountChange } from './on-account-change';
-import { requestAirdrop } from './request-airdrop';
+import { sendTransaction } from './send-transaction';
+
+const myKeypair = Keypair.fromSecretKey(Uint8Array.from(mySecretKey));
 
 const webSocket$ = createWebSocket();
 
@@ -14,7 +18,9 @@ webSocket$
   );
 
 webSocket$
-  .pipe(concatMap((ws) => accountSubscribe(ws, WALLET_PUBLIC_KEY)))
+  .pipe(concatMap((ws) => accountSubscribe(ws, myKeypair.publicKey.toBase58())))
   .subscribe();
 
-requestAirdrop(WALLET_PUBLIC_KEY, AIRDROP_LAMPORTS).subscribe();
+createNativeTransferTransaction(myKeypair, Keypair.generate().publicKey, 1)
+  .pipe(concatMap((transaction) => sendTransaction(transaction.serialize())))
+  .subscribe();
